@@ -1,8 +1,9 @@
-import { readFile, writeFile } from "fs/promises";
+import { mkdir, readFile, writeFile } from "fs/promises";
 import path from "path";
 import { File } from "./file.js";
 import { glob } from "glob";
-import { normalize, Offsets } from "./normalize.js";
+import { Offsets } from "./types.js";
+import { PromisePool } from '@supercharge/promise-pool'
 
 export type ApplicationOptions = {
   source: string;
@@ -11,40 +12,54 @@ export type ApplicationOptions = {
 };
 
 export class Application {
-  options: ApplicationOptions;
+  private options: ApplicationOptions;
 
   constructor(options: ApplicationOptions) {
     this.options = options;
+  }
+
+  get offset() {
+    return this.options.offset;
   }
 
   async readSource(filename: string) {
     return await readFile(path.join(this.options.source, filename));
   }
 
+  private _createTargetDirectory?: Promise<unknown>;
+
+  private async createTargetDirectory() {
+    let promise = this._createTargetDirectory;
+    if(!promise) {
+      promise = mkdir(this.options.target, { recursive: true });
+      this._createTargetDirectory = promise;
+    }
+    return promise;
+  }
+
   async writeTarget(buffer: Buffer, filename: string) {
+    await this.createTargetDirectory();
     await writeFile(path.join(this.options.target, filename), buffer);
   }
 
-  file(filename: string) {
+  private file(filename: string) {
     return new File({ filename, app: this });
   }
 
-  async files() {
-    const filenames = await glob('*.tif', { cwd: this.options.source });
+  private async files() {
+    const cwd = this.options.source;
+    const filenames = await glob(['*.tif', '*.jpg', '*.jpeg'], { cwd });
     return filenames.map((filename) => this.file(filename));
-  }
-
-  async normalizeFile(file: File) {
-    const raw = await file.raw();
-    const offset = this.options.offset;
-    normalize(raw, { offset });
-    await file.save(raw);
   }
 
   async normalize() {
     const files = await this.files();
-    await Promise.all(files.map(async (file) => {
-      await this.normalizeFile(file);
-    }))
+    const total = files.length;
+    let processed = 0;
+    await PromisePool.withConcurrency(10).for(files).process(async (file) => {
+      let { filename } = await file.normalize();
+      processed++;
+      console.log(filename, '–', `${processed} / ${total}`);
+    });
   }
 }

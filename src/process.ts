@@ -1,22 +1,4 @@
-import { Raw } from "./file.js";
-
-export type Offsets = {
-  top: number;
-  left: number;
-  right: number;
-  bottom: number;
-}
-
-type Pixel = {
-  r: number;
-  g: number;
-  b: number;
-}
-
-type Point = { x: number; y: number };
-type Size = { width: number; height: number };
-type Range = { min: number; max: number };
-type Ranges = { r: Range, g: Range; b: Range; };
+import { Offsets, Pixel, Point, Range, Ranges, Raw, Size } from "./types.js";
 
 export const toIndex = (position: Point, size: Size) => {
   return position.y * size.width + position.x;
@@ -76,15 +58,20 @@ const getRange = (pixels: Pixel[], channel: keyof Pixel): Range => {
   };
 }
 
-const getRanges = (pixels: Pixel[]): Ranges => {
-  let r = getRange(pixels, 'r');
-  let g = getRange(pixels, 'g');
-  let b = getRange(pixels, 'b');
+const getRangesFromPixels = (pixels: Pixel[]): Ranges => {
+  const r = getRange(pixels, 'r');
+  const g = getRange(pixels, 'g');
+  const b = getRange(pixels, 'b');
   return {
     r,
     g,
     b
   };
+}
+
+const getRanges = (data: Buffer, size: Size, offset: Offsets) => {
+  const pixels = getPixels(data, size, offset);
+  return getRangesFromPixels(pixels);
 }
 
 const toRange = (value: number, range: Range) => {
@@ -93,9 +80,9 @@ const toRange = (value: number, range: Range) => {
 }
 
 const setRanges = (pixel: Pixel, ranges: Ranges) => {
-  let r = toRange(pixel.r, ranges.r);
-  let g = toRange(pixel.g, ranges.g);
-  let b = toRange(pixel.b, ranges.b);
+  const r = toRange(pixel.r, ranges.r);
+  const g = toRange(pixel.g, ranges.g);
+  const b = toRange(pixel.b, ranges.b);
   return {
     r,
     g,
@@ -113,13 +100,8 @@ const update = (data: Buffer, size: Size, ranges: Ranges) => {
   }
 }
 
-export const normalize = (raw: Raw, opts: { offset: Offsets }) => {
-  const { data, info: { width, height } } = raw;
-  const size = { width, height };
-  const { offset } = opts;
-
-  let pixels = getPixels(data, size, offset);
-  let ranges = getRanges(pixels);
-
+export const process = (raw: Raw, offset: Offsets) => {
+  const { data, size } = raw;
+  const ranges = getRanges(data, size, offset);
   update(data, size, ranges);
 }

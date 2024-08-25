@@ -1,50 +1,66 @@
 import sharp from "sharp";
 import { type Application } from "./app.js";
 import assert from "assert";
+import { Raw } from "./types.js";
+import { process } from "./process.js";
+import { basename, extname, parse } from "path";
+
+const CHANNELS = 3;
 
 export type FileOptions = {
   app: Application;
   filename: string;
 };
 
-export type Raw = {
-  data: Buffer;
-  info: {
-    width: number;
-    height: number;
-    channels: 1 | 2 | 3 | 4;
-  };
-};
-
 export class File {
-  options: FileOptions;
+  private options: FileOptions;
 
   constructor(options: FileOptions) {
     this.options = options;
   }
 
-  async raw(): Promise<Raw> {
-    let buffer = await this.options.app.readSource(this.options.filename);
-    let { data, info: { width, height, channels } } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
-    assert(channels === 3, 'File must have 3 channels');
-    return {
-      data,
-      info: {
-        width,
-        height,
-        channels,
-      },
-    };
+  private get app() {
+    return this.options.app;
   }
 
-  async save(opts: Raw) {
-    let output = await sharp(opts.data, {
+  private get filename() {
+    return this.options.filename;
+  }
+
+  private async raw() {
+    const buffer = await this.app.readSource(this.filename);
+    const { data, info: { width, height, channels } } = await sharp(buffer).raw().toBuffer({ resolveWithObject: true });
+    assert(channels === CHANNELS, `File must have ${CHANNELS} channels`);
+    return {
+      data,
+      size: {
+        width,
+        height,
+      },
+    } satisfies Raw;
+  }
+
+  private async save(raw: Raw) {
+    const { data, size } = raw;
+    const buffer = await sharp(data, {
       raw: {
-        width: opts.info.width,
-        height: opts.info.height,
-        channels: opts.info.channels,
+        ...size,
+        channels: CHANNELS,
       }
     }).tiff().toBuffer();
-    await this.options.app.writeTarget(output, this.options.filename);
+    const { name } = parse(this.filename);
+    const filename = `${name}.tif`;
+    await this.app.writeTarget(buffer, filename);
+    return filename;
+  }
+
+  async normalize() {
+    const raw = await this.raw();
+    const offset = this.app.offset;
+    process(raw, offset);
+    const filename = await this.save(raw);
+    return {
+      filename,
+    };
   }
 }

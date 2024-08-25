@@ -1,14 +1,26 @@
-import path from "path";
-import { fileURLToPath } from 'url';
-import { Application } from "./app.js";
+#!/usr/bin/env node
 
-const __dirname = fileURLToPath(path.dirname(import.meta.url));
-const files = path.join(__dirname, '..', 'files');
+import { Application } from "./app.js";
+import minimist from "minimist";
+
+const args = minimist(process.argv.slice(2));
+const [ source, target ] = args._;
+
+const help = () => {
+  console.log('usage: colorfix source target');
+}
+
+if(!source || !target || args.help) {
+  help();
+  process.exit(-1);
+}
+
+const offset = 500;
 
 const application = new Application({
-  source: path.join(files, 'input'),
-  target: path.join(files, 'output'),
-  offset: { top: 250, bottom: 250, left: 250, right: 250 }
+  source,
+  target,
+  offset: { top: offset, bottom: offset, left: offset, right: offset },
 });
 
 await application.normalize();

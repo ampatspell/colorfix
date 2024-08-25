@@ -4,13 +4,19 @@
   "scripts": {
     "build": "npx tsc"
   },
+  "bin": {
+    "colorfix": "build/main.js"
+  },
   "devDependencies": {
     "@types/node": "^22.5.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.5.4"
   },
   "dependencies": {
+    "@supercharge/promise-pool": "^3.2.0",
+    "@types/minimist": "^1.2.5",
     "glob": "^11.0.0",
+    "minimist": "^1.2.8",
     "sharp": "^0.33.5"
   },
   "type": "module"
