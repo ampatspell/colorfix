@@ -74,9 +74,14 @@ const getRanges = (data: Buffer, size: Size, offset: Offsets) => {
   return getRangesFromPixels(pixels);
 }
 
+const clamp = (value: number, min: number, max: number) => {
+  return Math.min(max, Math.max(min, value));
+}
+
 const toRange = (value: number, range: Range) => {
   const { min, max } = range;
-  return (value - min) / (max - min) * 256;
+  const scaled = (value - min) / (max - min) * 255;
+  return clamp(scaled, 0, 255);
 }
 
 const setRanges = (pixel: Pixel, ranges: Ranges) => {
