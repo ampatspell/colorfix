@@ -48,6 +48,9 @@ export class File {
         channels: CHANNELS,
       }
     }).tiff().toBuffer();
+    }).tiff({
+      compression: 'deflate',
+    }).toBuffer();
     const { name } = parse(this.filename);
     const filename = `${name}.tif`;
     await this.app.writeTarget(buffer, filename);
