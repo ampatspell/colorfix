@@ -9,6 +9,8 @@ export type ApplicationOptions = {
   source: string;
   target: string;
   offset: Offsets;
+  concurrency: number;
+  skip: boolean;
 };
 
 export class Application {
@@ -20,6 +22,10 @@ export class Application {
 
   get offset() {
     return this.options.offset;
+  }
+
+  get skip() {
+    return this.options.skip;
   }
 
   async readSource(filename: string) {
@@ -55,8 +61,11 @@ export class Application {
   async normalize() {
     const files = await this.files();
     const total = files.length;
+    const concurrency = this.options.concurrency;
+    console.log('Concurrency:', concurrency);
+    console.log('Skip:', this.skip);
     let processed = 0;
-    await PromisePool.withConcurrency(10).for(files).process(async (file) => {
+    await PromisePool.withConcurrency(concurrency).for(files).process(async (file) => {
       let { filename } = await file.normalize();
       processed++;
       console.log(filename, '–', `${processed} / ${total}`);

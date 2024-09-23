@@ -47,7 +47,6 @@ export class File {
         ...size,
         channels: CHANNELS,
       }
-    }).tiff().toBuffer();
     }).tiff({
       compression: 'deflate',
     }).toBuffer();
@@ -57,10 +56,16 @@ export class File {
     return filename;
   }
 
+  private process(raw: Raw) {
+    if(!this.app.skip) {
+      const offset = this.app.offset;
+      process(raw, offset);
+    }
+  }
+
   async normalize() {
     const raw = await this.raw();
-    const offset = this.app.offset;
-    process(raw, offset);
+    this.process(raw);
     const filename = await this.save(raw);
     return {
       filename,
